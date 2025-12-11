@@ -77,4 +77,9 @@ public class OrderItemRepository implements OrderItemDAO {
     public void delete(Long id) {
 
     }
+
+    @Override
+    public BigDecimal sumLineTotalByOrderId(Long orderId) {
+        return null;
+    }
 }

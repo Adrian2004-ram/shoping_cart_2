@@ -2,8 +2,10 @@ package com.iesvdm.shopping_cart2.controller;
 
 import com.iesvdm.shopping_cart2.model.CustomerOrder;
 import com.iesvdm.shopping_cart2.model.OrderItem;
+import com.iesvdm.shopping_cart2.model.Coupon;
 import com.iesvdm.shopping_cart2.repository.CustomerOrderDAO;
 import com.iesvdm.shopping_cart2.repository.OrderItemDAO;
+import com.iesvdm.shopping_cart2.repository.CouponRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +20,7 @@ import com.iesvdm.shopping_cart2.dto.OrderItemDTO;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/cart")
@@ -30,10 +32,13 @@ public class CartController {
 
     //Clases DAO
     @Autowired
-    OrderItemDAO orderItemDAO;
+    private OrderItemDAO orderItemDAO;
 
     @Autowired
-    CustomerOrderDAO customerOrderDAO;
+    private CustomerOrderDAO customerOrderDAO;
+
+    @Autowired
+    private CouponRepository couponRepository;
 
     @GetMapping("/step1")
     public String step1get(Model model, @ModelAttribute OrderItemDTO orderItemDTO) {
@@ -75,6 +80,49 @@ public class CartController {
                 .build();
 
         listProducts.add(dto);
+
+        return "redirect:/cart/step1";
+    }
+
+    @PostMapping("/discount")
+    public String applyDiscount(@RequestParam String couponCode) {
+        if (currentOrderId == null) {
+            // Si no hay orden actual, crearla
+            CustomerOrder order = CustomerOrder.builder().build();
+            CustomerOrder createdOrder = customerOrderDAO.create(order);
+            currentOrderId = createdOrder.getId();
+        }
+
+        Optional<Coupon> maybeCoupon = couponRepository.findByCode(couponCode);
+        if (maybeCoupon.isEmpty()) {
+            // Coupon no encontrado o inactivo -> no hacemos nada (podríamos añadir mensaje)
+            return "redirect:/cart/step1";
+        }
+
+        Coupon coupon = maybeCoupon.get();
+
+        // Calculamos grossTotal sumando line_total de los order_items
+        BigDecimal grossTotal = orderItemDAO.sumLineTotalByOrderId(currentOrderId);
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if ("PERCENTAGE".equalsIgnoreCase(coupon.getDiscountType())) {
+            discountAmount = grossTotal.multiply(coupon.getDiscountValue()).divide(new BigDecimal("100"));
+        } else {
+            // FIXED
+            discountAmount = coupon.getDiscountValue();
+        }
+
+        BigDecimal finalTotal = grossTotal.subtract(discountAmount);
+        if (finalTotal.compareTo(BigDecimal.ZERO) < 0) finalTotal = BigDecimal.ZERO;
+
+        // Recuperamos la orden y actualizamos campos
+        CustomerOrder order = customerOrderDAO.findById(currentOrderId).orElseGet(() -> CustomerOrder.builder().id(currentOrderId).build());
+        order.setGrossTotal(grossTotal);
+        order.setDiscountTotal(discountAmount);
+        order.setFinalTotal(finalTotal);
+        order.setCouponId(coupon.getId());
+
+        customerOrderDAO.update(order);
 
         return "redirect:/cart/step1";
     }
