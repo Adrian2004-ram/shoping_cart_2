@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Step 2</title>
+    <style>body{font-family:Arial, sans-serif;margin:20px;} label{display:inline-block;width:120px;}</style>
+</head>
+<body>
+<h1>Step 2 - Review Order Item</h1>
+<div>
+    <p><strong>Product name:</strong> <span th:text="${orderItem.productName}">[productName]</span></p>
+    <p><strong>Unit price:</strong> <span th:text="${orderItem.unitPrice}">[unitPrice]</span></p>
+    <p><strong>Quantity:</strong> <span th:text="${orderItem.quantity}">[quantity]</span></p>
+    <p><strong>Line total:</strong> <span th:text="${orderItem.lineTotal}">[lineTotal]</span></p>
+</div>
+
+<form method="post" action="/cart/confirm">
+    <button type="submit">Confirm</button>
+</form>
+
+</body>
+</html>

@@ -15,6 +15,5 @@ public class OrderItem {
     private Integer quantity;
     private BigDecimal lineTotal;
     private Long orderId;
-    private Long productId;
 }
 

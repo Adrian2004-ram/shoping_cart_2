@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product {
+    //Useremos esta clase, si queremos que el propio cliente elija entre los productosa con un select
     private Long id;
     private String name;
     private BigDecimal price;
