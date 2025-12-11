@@ -1,6 +1,8 @@
 package com.iesvdm.shopping_cart2.controller;
 
+import com.iesvdm.shopping_cart2.model.CustomerOrder;
 import com.iesvdm.shopping_cart2.model.OrderItem;
+import com.iesvdm.shopping_cart2.repository.CustomerOrderDAO;
 import com.iesvdm.shopping_cart2.repository.OrderItemDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -24,11 +26,14 @@ public class CartController {
 
     // Lista en memoria para almacenar los productos añadidos en el paso 1
     private final List<OrderItemDTO> listProducts = new ArrayList<>();
-    private final AtomicLong nextProductId = new AtomicLong(1);
+    private Long currentOrderId = null;
 
     //Clases DAO
     @Autowired
     OrderItemDAO orderItemDAO;
+
+    @Autowired
+    CustomerOrderDAO customerOrderDAO;
 
     @GetMapping("/step1")
     public String step1get(Model model, @ModelAttribute OrderItemDTO orderItemDTO) {
@@ -40,21 +45,37 @@ public class CartController {
     public String addItem(@RequestParam String productName,
                           @RequestParam BigDecimal unitPrice,
                           @RequestParam Integer quantity) {
+
+        // Crear CustomerOrder por defecto si aún no existe
+        if (currentOrderId == null) {
+            CustomerOrder order = CustomerOrder.builder().build();
+            CustomerOrder createdOrder = customerOrderDAO.create(order);
+            currentOrderId = createdOrder.getId();
+        }
+
         // Calculamos el line total
         BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-/*
-        orderItemDAO.
 
+        // Construimos el OrderItem y lo persistimos
         OrderItem item = OrderItem.builder()
-                .orderId(orderId)
+                .orderId(currentOrderId)
                 .productName(productName)
                 .unitPrice(unitPrice)
                 .quantity(quantity)
                 .lineTotal(lineTotal)
                 .build();
 
+        OrderItem created = orderItemDAO.create(item);
 
-        listProducts.add(item);*/
+        // Añadimos representación DTO a la lista en memoria para mostrar en la vista
+        OrderItemDTO dto = OrderItemDTO.builder()
+                .productName(created.getProductName())
+                .unitPrice(created.getUnitPrice())
+                .quantity(created.getQuantity())
+                .build();
+
+        listProducts.add(dto);
+
         return "redirect:/cart/step1";
     }
 
